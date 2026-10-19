@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구슬 꿰기 놀이</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  html, body { font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+  button { font-family: inherit; }
+  button:focus-visible { outline: 3px solid #7c3aed; outline-offset: 2px; }
+  svg text { font-family: inherit; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-9px) rotate(-4deg); }
+    40% { transform: translateX(9px) rotate(4deg); }
+    60% { transform: translateX(-7px) rotate(-2deg); }
+    80% { transform: translateX(7px) rotate(2deg); }
+  }
+  .shake { animation: shake .45s; border-color: #f43f5e !important; background: #fff1f2 !important; }
+
+  @keyframes appshake {
+    0%,100% { transform: translate(0,0); }
+    20% { transform: translate(-5px,0); }
+    40% { transform: translate(5px,-2px); }
+    60% { transform: translate(-4px,2px); }
+    80% { transform: translate(3px,0); }
+  }
+  .app-shake { animation: appshake .4s; }
+
+  @keyframes flash { 0% { opacity: .55; } 100% { opacity: 0; } }
+  .flash-on { animation: flash .5s ease-out; }
+
+  @keyframes glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.75); }
+    50% { box-shadow: 0 0 0 9px rgba(245,158,11,0); }
+  }
+  .rule-now { border-color: #f59e0b !important; animation: glow 1.1s infinite; transform: scale(1.1); background: #fffbeb; }
+  .line-now { border-color: #f59e0b !important; animation: glow 1.1s infinite; }
+
+  @keyframes hintPulse { from { transform: scale(1); } to { transform: scale(1.14); } }
+  .hint-ring { border-color: #f59e0b !important; background: #fffbeb !important; animation: hintPulse .5s infinite alternate; box-shadow: 0 0 0 4px rgba(245,158,11,.35); }
+
+  @keyframes slotpulse { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
+  .slot-next { stroke: #ffe58f; stroke-width: 3; animation: slotpulse 1s infinite; }
+
+  @keyframes twinkle { 0%,100% { opacity: .2; } 50% { opacity: .9; } }
+  .tw { animation: twinkle 2.6s infinite; }
+  .tw2 { animation: twinkle 3.4s .8s infinite; }
+
+  @keyframes celebrate {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(252,211,77,.8), 0 0 60px 10px rgba(252,211,77,.55); }
+    100% { transform: scale(1); }
+  }
+  .celebrate { animation: celebrate 1s ease-out; }
+
+  @keyframes popin { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .pop-in { animation: popin .35s cubic-bezier(.2,1.3,.4,1); }
+  .bead-pop { transform-box: fill-box; transform-origin: center; animation: popin .35s cubic-bezier(.2,1.3,.4,1); }
+
+  @keyframes hintBtn { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.7); } 50% { box-shadow: 0 0 0 10px rgba(245,158,11,0); } }
+  .hint-pulse { animation: hintBtn 1s infinite; background: #f59e0b !important; color: #fff !important; }
+
+  .bead-btn:hover svg { filter: drop-shadow(0 0 6px rgba(255,255,255,.95)) brightness(1.08); }
+  .bead-btn svg { transition: filter .15s; }
+  .star-on { color: #fcd34d; fill: #fcd34d; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rule-now, .line-now, .slot-next, .tw, .tw2, .hint-pulse, .hint-ring, .bead-pop { animation: none; }
+  }
+</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-fuchsia-50 via-violet-50 to-sky-100 text-slate-800">
+
+<!-- 숨은 SVG 정의(그라데이션·그림자) -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs id="defsInner"></defs></svg>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><path id="mp" d=""/></svg>
+
+<canvas id="confetti" class="pointer-events-none fixed inset-0 z-[80]"></canvas>
+<div id="flash" class="pointer-events-none fixed inset-0 z-[70] bg-rose-500 opacity-0"></div>
+<div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed left-1/2 top-4 z-[90] -translate-x-1/2 opacity-0 transition-opacity"></div>
+
+<div id="app" class="mx-auto max-w-6xl px-4 py-4 sm:py-6">
+
+  <!-- 헤더 -->
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-lg">
+        <i data-lucide="gem" class="h-7 w-7"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">구슬 꿰기 놀이</h1>
+        <p id="subTitle" class="text-base text-slate-500">규칙을 보고 구슬을 눌러서 꿰어 보세요</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnGuide" class="inline-flex h-11 items-center gap-2 rounded-full border-2 border-violet-100 bg-white px-4 font-bold text-slate-700 shadow-sm hover:border-violet-300"></button>
+      <button id="btnSound" class="inline-flex h-11 items-center gap-2 rounded-full border-2 border-violet-100 bg-white px-4 font-bold text-slate-700 shadow-sm hover:border-violet-300"></button>
+      <button id="btnReset" class="inline-flex h-11 items-center gap-2 rounded-full border-2 border-violet-100 bg-white px-4 font-bold text-slate-700 shadow-sm hover:border-violet-300">
+        <i data-lucide="rotate-ccw" class="h-5 w-5"></i><span class="hidden sm:inline">처음부터</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 놀이 고르기 (기본 / 심화 / 나만의 작품) -->
+  <div id="modeBar" class="mt-4 grid grid-cols-3 gap-1.5 rounded-[1.6rem] bg-white/80 p-1.5 shadow-md"></div>
+
+  <!-- ===== 기본 놀이 ===== -->
+  <div id="viewBasic">
+  <!-- 탭 + 작품 선택 -->
+  <nav class="mt-4 flex flex-col gap-3">
+    <div id="tabs" class="inline-flex w-full gap-1.5 self-start rounded-full bg-white p-1.5 shadow-md sm:w-auto"></div>
+    <div id="chips" class="flex flex-wrap gap-2"></div>
+  </nav>
+
+  <!-- 본문 -->
+  <main class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+    <section id="stageBox" class="relative overflow-hidden rounded-[2rem] shadow-xl ring-1 ring-indigo-900/10">
+      <div id="stageHead" class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-4"></div>
+      <div id="stage"></div>
+    </section>
+
+    <aside class="flex flex-col gap-4">
+      <section id="rule" class="rounded-3xl border-2 border-amber-200 bg-amber-50 p-4 shadow-md"></section>
+
+      <section class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="shopping-basket" class="h-5 w-5 text-violet-500"></i>구슬 바구니</h2>
+          <span class="text-base text-slate-500">눌러서 꿰어요</span>
+        </div>
+        <div id="tray" class="grid grid-cols-4 gap-3"></div>
+        <button id="btnHint" class="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-amber-100 text-lg font-bold text-amber-800 transition hover:bg-amber-200">
+          <i data-lucide="lightbulb" class="h-5 w-5"></i>힌트 보기
+        </button>
+      </section>
+    </aside>
+  </main>
+  </div>
+
+  <!-- ===== 심화 놀이: 두 줄 교차 ===== -->
+  <div id="viewAdv" class="hidden">
+    <nav class="mt-4 flex flex-col gap-3">
+      <div id="advTabs" class="inline-flex w-full gap-1.5 self-start rounded-full bg-white p-1.5 shadow-md sm:w-auto"></div>
+      <div id="advChips" class="flex flex-wrap gap-2"></div>
+    </nav>
+
+    <main class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <div class="flex flex-col gap-4">
+        <section id="advStageBox" class="relative overflow-hidden rounded-[2rem] shadow-xl ring-1 ring-indigo-900/10">
+          <div id="advStageHead" class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-4"></div>
+          <div id="advStage"></div>
+        </section>
+        <section id="advHow" class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md"></section>
+      </div>
+
+      <aside class="flex flex-col gap-4">
+        <section id="advRule" class="rounded-3xl border-2 border-amber-200 bg-amber-50 p-4 shadow-md"></section>
+
+        <section class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md">
+          <h2 class="mb-3 flex items-center gap-2 text-lg font-extrabold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-base text-white">1</span>어느 줄에 꿸까요?</h2>
+          <div id="advLines" class="grid grid-cols-3 gap-2"></div>
+          <div class="mb-3 mt-5 flex items-center justify-between">
+            <h2 class="flex items-center gap-2 text-lg font-extrabold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-base text-white">2</span>구슬 고르기</h2>
+            <span class="text-base text-slate-500">눌러서 꿰어요</span>
+          </div>
+          <div id="advTray" class="grid grid-cols-4 gap-3"></div>
+          <button id="advHint" class="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-amber-100 text-lg font-bold text-amber-800 transition hover:bg-amber-200">
+            <i data-lucide="lightbulb" class="h-5 w-5"></i>힌트 보기
+          </button>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- ===== 나만의 팔찌·목걸이 만들기 ===== -->
+  <div id="viewFree" class="hidden">
+    <main class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <div class="flex flex-col gap-4">
+        <section id="freeStageBox" class="relative overflow-hidden rounded-[2rem] shadow-xl ring-1 ring-indigo-900/10">
+          <div id="freeStage"></div>
+        </section>
+
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <button data-fact="undo" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-violet-100 bg-white text-base font-bold text-slate-700 shadow-sm hover:border-violet-300"><i data-lucide="undo-2" class="h-5 w-5"></i>되돌리기</button>
+          <button data-fact="repeat" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-violet-100 bg-white text-base font-bold text-slate-700 shadow-sm hover:border-violet-300"><i data-lucide="repeat" class="h-5 w-5"></i>한 번 더 반복</button>
+          <button data-fact="clear" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-violet-100 bg-white text-base font-bold text-slate-700 shadow-sm hover:border-rose-300"><i data-lucide="trash-2" class="h-5 w-5"></i>모두 지우기</button>
+          <button data-fact="save" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 text-base font-extrabold text-white shadow-lg hover:brightness-105"><i data-lucide="download" class="h-5 w-5"></i>이미지 저장</button>
+        </div>
+
+        <section class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md">
+          <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="sparkles" class="h-5 w-5 text-violet-500"></i>꾸미기</h2>
+          <label for="freeTitle" class="mt-3 block text-base font-bold text-slate-600">작품 이름</label>
+          <input id="freeTitle" maxlength="10" class="mt-1 h-12 w-full rounded-2xl border-2 border-violet-100 bg-white px-4 text-lg font-bold text-slate-800 outline-none focus:border-violet-400" placeholder="나만의 팔찌">
+          <div class="mt-4 text-base font-bold text-slate-600">줄 색깔</div>
+          <div id="freeStr" class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+          <div class="mt-4 text-base font-bold text-slate-600">배경</div>
+          <div id="freeBg" class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-4">
+        <section class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md">
+          <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="palette" class="h-5 w-5 text-violet-500"></i>무엇을 만들까요?</h2>
+          <div id="freeType" class="mt-3 grid grid-cols-2 gap-2"></div>
+          <div class="mt-4 text-base font-bold text-slate-600">꿰는 방법</div>
+          <div id="freeMethod" class="mt-1 grid grid-cols-2 gap-2"></div>
+          <div id="freeLineBox" class="mt-4 hidden">
+            <div class="text-base font-bold text-slate-600">어느 줄에 꿸까요?</div>
+            <div id="freeLines" class="mt-1 grid grid-cols-3 gap-2"></div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border-2 border-white bg-white/90 p-4 shadow-md">
+          <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="droplet" class="h-5 w-5 text-violet-500"></i>색 고르기</h2>
+          <div id="freeColors" class="mt-3 grid grid-cols-8 gap-1.5"></div>
+          <div class="mb-3 mt-5 flex items-center justify-between">
+            <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="shapes" class="h-5 w-5 text-violet-500"></i>모양 고르기</h2>
+            <span class="text-base text-slate-500">누르면 꿰어져요</span>
+          </div>
+          <div id="freeShapes" class="grid grid-cols-4 gap-3"></div>
+          <p id="freeCount" class="mt-3 text-center text-base font-bold text-slate-500"></p>
+        </section>
+      </aside>
+    </main>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* ============ 데이터 ============ */
+const $ = id => document.getElementById(id);
+const icons = () => { if (window.lucide) lucide.createIcons(); };
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const COLORS = {
+  red:    { adj: '빨간', c: ['#ffc9ce', '#ff5d70', '#c7233f'] },
+  orange: { adj: '주황', c: ['#ffdcb3', '#ff9a3c', '#d1600a'] },
+  yellow: { adj: '노란', c: ['#fff6b0', '#ffd21f', '#c99400'] },
+  green:  { adj: '초록', c: ['#ccf5b4', '#5ccf6a', '#25903f'] },
+  sky:    { adj: '하늘', c: ['#d4f3ff', '#5cc8f5', '#1c88bd'] },
+  blue:   { adj: '파란', c: ['#c3d0ff', '#5b7cff', '#2b42bd'] },
+  purple: { adj: '보라', c: ['#e8d1ff', '#a66bff', '#6a32c4'] },
+  pink:   { adj: '분홍', c: ['#ffd6ef', '#ff7ac2', '#cc3389'] },
+};
+const COLOR_KEYS = Object.keys(COLORS);
+const SHAPES = ['circle', 'heart', 'star', 'square', 'diamond', 'drop', 'flower', 'tube'];
+const SHAPE_NAME = { circle: '동그라미', heart: '하트', star: '별', square: '네모', diamond: '마름모', drop: '물방울', flower: '꽃', tube: '긴 구슬' };
+
+const B = (shape, color) => ({ shape, color });
+const WORKS = {
+  necklace: [
+    { id: 'n1', type: 'necklace', name: '무지개 목걸이', diff: 1, repeat: 4, rule: [B('circle','red'), B('circle','yellow'), B('circle','blue')] },
+    { id: 'n2', type: 'necklace', name: '하트별 목걸이', diff: 1, repeat: 5, rule: [B('heart','pink'), B('star','yellow')] },
+    { id: 'n3', type: 'necklace', name: '꽃밭 목걸이',   diff: 2, repeat: 4, rule: [B('flower','pink'), B('circle','green'), B('circle','green')] },
+    { id: 'n4', type: 'necklace', name: '보석 목걸이',   diff: 3, repeat: 3, rule: [B('diamond','blue'), B('circle','purple'), B('drop','sky'), B('circle','purple')] },
+  ],
+  bracelet: [
+    { id: 'b1', type: 'bracelet', name: '딸기 팔찌', diff: 1, repeat: 5, rule: [B('circle','red'), B('circle','green')] },
+    { id: 'b2', type: 'bracelet', name: '바다 팔찌', diff: 2, repeat: 3, rule: [B('square','blue'), B('drop','sky'), B('square','blue')] },
+    { id: 'b3', type: 'bracelet', name: '사탕 팔찌', diff: 2, repeat: 4, rule: [B('tube','orange'), B('circle','pink'), B('circle','purple')] },
+    { id: 'b4', type: 'bracelet', name: '별빛 팔찌', diff: 3, repeat: 3, rule: [B('star','yellow'), B('diamond','purple'), B('heart','pink'), B('diamond','purple')] },
+  ],
+};
+const TAB_INFO = {
+  necklace: { label: '구슬 목걸이', icon: 'gem' },
+  bracelet: { label: '구슬 팔찌', icon: 'circle-dot' },
+};
+const PHRASES = ['규칙 찾기 대장!', '반복의 달인이에요!', '정말 예쁜 작품이에요!', '와, 멋진 솜씨예요!', '규칙을 완벽하게 찾았어요!'];
+const NECK_D = 'M 100 60 C 150 520 650 520 700 60';
+
+/* ============ 상태 ============ */
+function loadDone() { try { return new Set(JSON.parse(localStorage.getItem('bead-done') || '[]')); } catch (e) { return new Set(); } }
+function saveDone() { try { localStorage.setItem('bead-done', JSON.stringify([...state.done])); } catch (e) {} }
+
+const state = {
+  tab: 'necklace', idx: 0, placed: 0, wrong: 0,
+  guide: true, sound: true, done: loadDone(),
+  tray: [], pos: [], landing: new Set(), session: 0,
+};
+const cur = () => WORKS[state.tab][state.idx];
+const totalOf = w => w.rule.length * w.repeat;
+const targetAt = i => cur().rule[i % cur().rule.length];
+const beadName = b => `${COLORS[b.color].adj} ${SHAPE_NAME[b.shape]}`;
+const keyOf = b => `${b.shape}|${b.color}`;
+
+/* ============ 구슬 그리기 (SVG) ============ */
+const STAR_PTS = Array.from({ length: 10 }, (_, i) => {
+  const a = (-90 + 36 * i) * Math.PI / 180, r = i % 2 === 0 ? 44 : 19;
+  return `${(50 + r * Math.cos(a)).toFixed(1)},${(54 + r * Math.sin(a)).toFixed(1)}`;
+}).join(' ');
+
+function beadInner(shape, color) {
+  const k = COLORS[color].c, fill = `url(#g-${color})`;
+  const st = `stroke="${k[2]}" stroke-width="2.5" stroke-linejoin="round"`;
+  let body = '', hl = { x: 35, y: 32, rx: 14, ry: 7, r: -35 };
+  switch (shape) {
+    case 'circle':
+      body = `<circle cx="50" cy="50" r="40" fill="${fill}" ${st}/><circle cx="50" cy="50" r="27" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>`;
+      break;
+    case 'heart':
+      body = `<path d="M50 88 C20 64 9 46 9 30 C9 17 19 9 30 9 C39 9 46 14 50 21 C54 14 61 9 70 9 C81 9 91 17 91 30 C91 46 80 64 50 88Z" fill="${fill}" ${st}/>`;
+      hl = { x: 30, y: 27, rx: 11, ry: 6, r: -40 };
+      break;
+    case 'star':
+      body = `<polygon points="${STAR_PTS}" fill="${fill}" stroke="${k[2]}" stroke-width="5" stroke-linejoin="round"/>`;
+      hl = { x: 43, y: 36, rx: 9, ry: 5, r: -35 };
+      break;
+    case 'square':
+      body = `<rect x="13" y="13" width="74" height="74" rx="20" fill="${fill}" ${st}/><rect x="24" y="24" width="52" height="52" rx="12" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>`;
+      hl = { x: 31, y: 29, rx: 14, ry: 6, r: -30 };
+      break;
+    case 'diamond':
+      body = `<polygon points="50,6 90,50 50,94 10,50" fill="${fill}" stroke="${k[2]}" stroke-width="5" stroke-linejoin="round"/><path d="M12 50 H88 M50 8 L34 50 L50 92 M50 8 L66 50 L50 92" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="2"/>`;
+      hl = { x: 38, y: 33, rx: 9, ry: 4.5, r: -45 };
+      break;
+    case 'drop':
+      body = `<path d="M50 7 C50 7 18 46 18 63 C18 80 32 92 50 92 C68 92 82 80 82 63 C82 46 50 7 50 7Z" fill="${fill}" ${st}/>`;
+      hl = { x: 38, y: 62, rx: 6, ry: 13, r: 18 };
+      break;
+    case 'flower': {
+      const petals = [0, 1, 2, 3, 4].map(n => {
+        const a = (-90 + 72 * n) * Math.PI / 180;
+        return `<circle cx="${(50 + 27 * Math.cos(a)).toFixed(1)}" cy="${(50 + 27 * Math.sin(a)).toFixed(1)}" r="21" fill="${fill}" ${st}/>`;
+      }).join('');
+      body = petals + `<circle cx="50" cy="50" r="13" fill="#ffe27a" stroke="#d9a400" stroke-width="2.5"/>`;
+      hl = { x: 40, y: 24, rx: 8, ry: 4, r: -30 };
+      break;
+    }
+    case 'tube':
+      body = `<rect x="4" y="27" width="92" height="46" rx="23" fill="${fill}" ${st}/><path d="M28 30 V70 M72 30 V70" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>`;
+      hl = { x: 50, y: 38, rx: 34, ry: 4.5, r: 0 };
+      break;
+  }
+  const glint = `<ellipse cx="${hl.x}" cy="${hl.y}" rx="${hl.rx}" ry="${hl.ry}" fill="#fff" fill-opacity=".72" transform="rotate(${hl.r} ${hl.x} ${hl.y})"/><circle cx="${hl.x + hl.rx + 4}" cy="${hl.y + hl.ry + 6}" r="2.6" fill="#fff" fill-opacity=".9"/>`;
+  return body + glint;
+}
+const beadSVG = (shape, color, attrs = '') =>
+  `<svg viewBox="0 0 100 100" aria-hidden="true" ${attrs}>${beadInner(shape, color)}</svg>`;
+
+function buildDefs() {
+  let d = '';
+  COLOR_KEYS.forEach(c => {
+    const k = COLORS[c].c;
+    d += `<radialGradient id="g-${c}" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="${k[0]}"/><stop offset=".5" stop-color="${k[1]}"/><stop offset="1" stop-color="${k[2]}"/></radialGradient>`;
+  });
+  d += `<filter id="beadShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".4"/></filter>`;
+  d += `<radialGradient id="stageBg" cx=".5" cy=".45" r=".75"><stop offset="0" stop-color="#4b3b8c"/><stop offset=".6" stop-color="#2b2159"/><stop offset="1" stop-color="#1a1440"/></radialGradient>`;
+  $('defsInner').innerHTML = d;
+}
+
+/* ============ 소리 (Web Audio) ============ */
+let actx = null;
+function audio() {
+  if (!state.sound) return null;
+  if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; actx = new AC(); }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone({ f, f2, t = 0, d = 0.3, type = 'sine', g = 0.3 }) {
+  const c = audio(); if (!c) return;
+  const o = c.createOscillator(), gn = c.createGain(), t0 = c.currentTime + t;
+  o.type = type;
+  o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
+  gn.gain.setValueAtTime(0.0001, t0);
+  gn.gain.exponentialRampToValueAtTime(g, t0 + 0.012);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  o.connect(gn); gn.connect(c.destination);
+  o.start(t0); o.stop(t0 + d + 0.03);
+}
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0];
+function sndCorrect(n) { const f = PENTA[n % 5] * (n >= 5 ? 1 : 1); tone({ f, d: 0.35, g: 0.28 }); tone({ f: f * 2, type: 'triangle', d: 0.25, g: 0.07 }); }
+function sndWrong() {
+  tone({ f: 320, type: 'square', d: 0.2, g: 0.55 });
+  tone({ f: 160, type: 'sawtooth', d: 0.2, g: 0.45 });
+  tone({ f: 230, t: 0.26, type: 'square', d: 0.5, g: 0.6 });
+  tone({ f: 115, t: 0.26, type: 'sawtooth', d: 0.5, g: 0.5 });
+}
+function sndRepeat() { [659.25, 783.99, 1046.5].forEach((f, i) => tone({ f, t: i * 0.09, d: 0.25, g: 0.22, type: 'triangle' })); }
+function sndFanfare() {
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone({ f, t: i * 0.14, d: 0.32, g: 0.28, type: 'triangle' }));
+  [523.25, 659.25, 783.99, 1046.5].forEach(f => tone({ f, t: 0.6, d: 1.1, g: 0.14, type: 'triangle' }));
+}
+function sndPop() { tone({ f: 460, f2: 90, d: 0.22, g: 0.22 }); }
+
+/* ============ 폭죽 ============ */
+const cv = $('confetti'), cctx = cv.getContext('2d');
+let CW = 0, CH = 0, parts = [], running = false;
+function fit() { const d = window.devicePixelRatio || 1; CW = innerWidth; CH = innerHeight; cv.width = CW * d; cv.height = CH * d; cctx.setTransform(d, 0, 0, d, 0, 0); }
+addEventListener('resize', fit); fit();
+const CONF = COLOR_KEYS.map(c => COLORS[c].c[1]).concat(['#ffffff']);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function startLoop() { if (!running) { running = true; requestAnimationFrame(loop); } }
+function cannon(side) {
+  const n = REDUCED ? 35 : 85;
+  for (let i = 0; i < n; i++) {
+    const ang = ((side === 'l' ? -65 : -115) + (Math.random() - 0.5) * 36) * Math.PI / 180, sp = 13 + Math.random() * 13;
+    parts.push({ x: side === 'l' ? 0 : CW, y: CH * 0.88, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, g: 0.32, drag: 0.987,
+      rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, s: 7 + Math.random() * 8, c: pick(CONF), shape: pick(['r', 'c', 's']), life: 1, decay: 0.0065 + Math.random() * 0.004 });
+  }
+  startLoop();
+}
+function burst(x, y) {
+  const c = pick(CONF), n = REDUCED ? 25 : 65;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 6.5;
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0.08, drag: 0.965, rot: 0, vr: 0, s: 3.5 + Math.random() * 2.5, c: Math.random() < 0.7 ? c : pick(CONF), shape: 'c', life: 1, decay: 0.014 });
+  }
+  sndPop(); startLoop();
+}
+function starPath(c, r) { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); }
+function loop() {
+  cctx.clearRect(0, 0, CW, CH);
+  for (const p of parts) {
+    p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= p.decay;
+    cctx.save(); cctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.5));
+    cctx.translate(p.x, p.y); cctx.rotate(p.rot); cctx.fillStyle = p.c;
+    if (p.shape === 'r') cctx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * 0.6);
+    else if (p.shape === 'c') { cctx.beginPath(); cctx.arc(0, 0, p.s / 2, 0, 6.283); cctx.fill(); }
+    else { starPath(cctx, p.s * 0.75); cctx.fill(); }
+    cctx.restore();
+  }
+  parts = parts.filter(p => p.life > 0 && p.y < CH + 40);
+  if (parts.length) requestAnimationFrame(loop); else { running = false; cctx.clearRect(0, 0, CW, CH); }
+}
+function fireworks() {
+  cannon('l'); cannon('r');
+  setTimeout(() => { cannon('l'); cannon('r'); }, 450);
+  [300, 700, 1100, 1500, 1900].forEach(t => setTimeout(() => burst(CW * (0.15 + Math.random() * 0.7), CH * (0.12 + Math.random() * 0.3)), t));
+}
+
+/* ============ 알림 ============ */
+let toastT;
+function toast(msg, kind) {
+  const t = $('toast');
+  t.className = `pointer-events-none fixed left-1/2 top-4 z-[90] flex -translate-x-1/2 items-center gap-2 rounded-full px-5 py-3 text-lg font-bold text-white shadow-xl transition-opacity ${kind === 'bad' ? 'bg-rose-600' : 'bg-emerald-600'}`;
+  t.innerHTML = `<i data-lucide="${kind === 'bad' ? 'circle-alert' : 'circle-check'}" class="h-6 w-6"></i><span>${msg}</span>`;
+  icons(); t.style.opacity = 1;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.style.opacity = 0; }, 2000);
+}
+
+/* ============ 렌더링 ============ */
+function renderHeader() {
+  $('btnGuide').innerHTML = `<i data-lucide="${state.guide ? 'eye' : 'eye-off'}" class="h-5 w-5"></i><span class="hidden sm:inline">길잡이 ${state.guide ? '켜짐' : '꺼짐'}</span>`;
+  $('btnGuide').setAttribute('aria-pressed', state.guide);
+  $('btnSound').innerHTML = `<i data-lucide="${state.sound ? 'volume-2' : 'volume-x'}" class="h-5 w-5"></i><span class="hidden sm:inline">소리 ${state.sound ? '켜짐' : '꺼짐'}</span>`;
+  $('btnSound').setAttribute('aria-pressed', state.sound);
+}
+
+function renderTabs() {
+  $('tabs').innerHTML = Object.keys(TAB_INFO).map(t => {
+    const on = state.tab === t, n = WORKS[t].filter(w => state.done.has(w.id)).length, all = n === WORKS[t].length;
+    return `<button data-tab="${t}" class="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-3 text-lg font-extrabold transition sm:flex-none ${on ? 'bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow-md' : 'text-slate-600 hover:bg-violet-50'}">
+      <i data-lucide="${TAB_INFO[t].icon}" class="h-5 w-5"></i>${TAB_INFO[t].label}
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm ${on ? 'bg-white/25' : 'bg-violet-100 text-violet-700'}">${all ? '<i data-lucide="crown" class="h-4 w-4 text-amber-400"></i>' : ''}${n}/${WORKS[t].length}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderChips() {
+  $('chips').innerHTML = WORKS[state.tab].map((w, i) => {
+    const on = state.idx === i, done = state.done.has(w.id);
+    const minis = w.rule.slice(0, 4).map(b => `<span class="block h-6 w-6">${beadSVG(b.shape, b.color, 'class="h-full w-full"')}</span>`).join('');
+    return `<button data-idx="${i}" class="flex items-center gap-2 rounded-2xl border-2 px-3 py-2 text-base font-bold transition ${on ? 'border-violet-600 bg-violet-600 text-white shadow-md' : 'border-violet-100 bg-white text-slate-700 hover:border-violet-300'}">
+      <span class="flex -space-x-1">${minis}</span>${w.name}
+      ${done ? `<i data-lucide="circle-check" class="h-5 w-5 ${on ? 'text-emerald-300' : 'text-emerald-500'}"></i>` : ''}
+    </button>`;
+  }).join('');
+}
+
+function renderRule() {
+  const w = cur(), len = w.rule.length, total = totalOf(w), complete = state.placed >= total;
+  const step = complete ? len : state.placed % len;
+  const rep = complete ? w.repeat - 1 : Math.floor(state.placed / len);
+  const tiles = w.rule.map((b, i) => {
+    const done = complete || i < step, now = !complete && i === step && state.guide;
+    const arrow = i > 0 ? `<div class="flex h-14 items-center"><i data-lucide="arrow-right" class="h-5 w-5 text-amber-400"></i></div>` : '';
+    return `${arrow}<div class="flex w-[76px] flex-col items-center gap-1">
+      <div class="relative h-14 w-14 rounded-2xl border-2 bg-white p-1.5 transition ${now ? 'rule-now' : done && !complete ? 'border-slate-200 opacity-40' : 'border-amber-100'}">
+        ${beadSVG(b.shape, b.color, 'class="h-full w-full"')}
+        ${done ? `<span class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white"><i data-lucide="check" class="h-3 w-3"></i></span>` : ''}
+      </div>
+      <span class="text-center text-sm font-medium leading-tight text-slate-600">${beadName(b)}</span>
+    </div>`;
+  }).join('');
+  const dots = Array.from({ length: w.repeat }, (_, r) => {
+    const d = complete || r < Math.floor(state.placed / len), c = !complete && r === Math.floor(state.placed / len);
+    return `<span class="h-4 w-4 rounded-full border-2 ${d ? 'border-emerald-500 bg-emerald-500' : c ? 'border-amber-500 bg-amber-200' : 'border-amber-200 bg-white'}"></span>`;
+  }).join('');
+  $('rule').innerHTML = `
+    <div class="flex items-center justify-between">
+      <h2 class="flex items-center gap-2 text-lg font-extrabold text-amber-900"><i data-lucide="clipboard-list" class="h-5 w-5"></i>규칙</h2>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-200 px-3 py-1 text-base font-extrabold text-amber-900"><i data-lucide="repeat" class="h-4 w-4"></i>${w.repeat}번 반복</span>
+    </div>
+    <div class="mt-3 flex flex-wrap items-start gap-x-1 gap-y-3">${tiles}</div>
+    <div class="mt-4 flex items-center gap-2 border-t border-amber-200 pt-3">
+      <span class="text-base font-bold text-amber-900">반복</span>
+      <span class="flex items-center gap-1.5">${dots}</span>
+      <span class="ml-auto text-base font-bold text-amber-900">${rep + 1} / ${w.repeat}</span>
+    </div>`;
+}
+
+const STARS = [[60,420,1.6],[120,300,1.2],[740,380,1.8],[700,250,1.2],[300,55,1.4],[520,40,1.6],[55,140,1.4],[765,120,1.5],[200,445,1.2],[600,450,1.4],[430,120,1.1],[160,190,1.1]];
+
+function renderStage() {
+  const w = cur(), N = state.pos.length, isN = w.type === 'necklace';
+  let s = `<svg id="stageSvg" viewBox="0 0 800 480" class="block h-auto w-full" role="img" aria-label="${w.name}"><rect width="800" height="480" fill="url(#stageBg)"/>`;
+  STARS.forEach((p, i) => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]}" fill="#fff" opacity=".45" class="${i % 4 === 0 ? 'tw' : i % 4 === 1 ? 'tw2' : ''}"/>`; });
+  if (isN) {
+    s += `<path d="${NECK_D}" fill="none" stroke="#f4d58d" stroke-width="3.5" stroke-linecap="round"/>`;
+    [[100, 60], [700, 60]].forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="#f4d58d" stroke="#c9a24a" stroke-width="2"/><circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#2b2159"/>`; });
+  } else {
+    s += `<circle cx="400" cy="240" r="168" fill="none" stroke="#f4d58d" stroke-width="3.5"/>`;
+  }
+  for (let i = state.placed; i < N; i++) {
+    const p = state.pos[i];
+    s += `<circle cx="${p.x}" cy="${p.y}" r="${(p.size / 2 - 3).toFixed(1)}" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.4)" stroke-width="2" stroke-dasharray="5 6" class="${i === state.placed && state.guide ? 'slot-next' : ''}"/>`;
+  }
+  for (let i = 0; i < state.placed; i++) {
+    const p = state.pos[i], b = targetAt(i), h = p.size / 2;
+    s += `<g data-idx="${i}" opacity="${state.landing.has(i) ? 0 : 1}" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${p.rot.toFixed(1)})" filter="url(#beadShadow)"><svg x="${-h}" y="${-h}" width="${p.size}" height="${p.size}" viewBox="0 0 100 100" overflow="visible">${beadInner(b.shape, b.color)}</svg></g>`;
+  }
+  const cy = isN ? 215 : 255;
+  s += `<text x="400" y="${cy}" text-anchor="middle" fill="#fff" font-weight="800"><tspan font-size="68">${state.placed}</tspan><tspan font-size="30" fill="#b9aee6" font-weight="600"> / ${N}</tspan></text>`;
+  s += `<text x="400" y="${cy + 34}" text-anchor="middle" fill="#b9aee6" font-size="22" font-weight="600">꿴 구슬</text></svg>`;
+  $('stage').innerHTML = s;
+
+  const stars = [1, 2, 3].map(n => `<i data-lucide="star" class="h-5 w-5 ${n <= w.diff ? 'star-on' : 'text-white/30'}"></i>`).join('');
+  $('stageHead').innerHTML = `
+    <div class="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-lg font-extrabold text-white backdrop-blur"><i data-lucide="${TAB_INFO[w.type].icon}" class="h-5 w-5"></i>${w.name}</div>
+    <div class="flex items-center gap-0.5 rounded-full bg-white/10 px-3 py-2" title="난이도" aria-label="난이도 ${w.diff}단계">${stars}</div>`;
+}
+
+function renderTray() {
+  const complete = state.placed >= totalOf(cur());
+  $('tray').className = `grid grid-cols-4 gap-3 ${complete ? 'pointer-events-none opacity-50' : ''}`;
+  $('tray').innerHTML = state.tray.map(b => `
+    <button class="bead-btn aspect-square rounded-2xl border-2 border-violet-100 bg-white p-2 shadow-sm transition hover:scale-110 hover:border-violet-300 active:scale-95"
+      data-key="${keyOf(b)}" data-shape="${b.shape}" data-color="${b.color}" aria-label="${beadName(b)}" title="${beadName(b)}">
+      ${beadSVG(b.shape, b.color, 'class="h-full w-full"')}
+    </button>`).join('');
+}
+
+function updateHintBtn() { $('btnHint').classList.toggle('hint-pulse', state.wrong >= 3); }
+
+function renderAll() { renderHeader(); renderTabs(); renderChips(); renderRule(); renderStage(); renderTray(); updateHintBtn(); icons(); }
+
+/* ============ 작품 배치 계산 ============ */
+function computeLayout(w) {
+  const N = totalOf(w), out = [];
+  if (w.type === 'necklace') {
+    const mp = $('mp'); mp.setAttribute('d', NECK_D);
+    const L = mp.getTotalLength(), a = L * 0.08, span = L * 0.84, spacing = span / (N - 1), size = Math.min(70, spacing * 0.88);
+    for (let i = 0; i < N; i++) {
+      const len = a + span * i / (N - 1), p = mp.getPointAtLength(len);
+      const q = mp.getPointAtLength(Math.min(L, len + 2)), o = mp.getPointAtLength(Math.max(0, len - 2));
+      const ang = Math.atan2(q.y - o.y, q.x - o.x) * 180 / Math.PI;
+      out.push({ x: p.x, y: p.y, size, rot: w.rule[i % w.rule.length].shape === 'tube' ? ang : 0 });
+    }
+  } else {
+    const R = 168, spacing = 2 * Math.PI * R / N, size = Math.min(76, spacing * 0.88);
+    for (let i = 0; i < N; i++) {
+      const ang = -90 + 360 * i / N, r = ang * Math.PI / 180;
+      out.push({ x: 400 + R * Math.cos(r), y: 240 + R * Math.sin(r), size, rot: w.rule[i % w.rule.length].shape === 'tube' ? ang + 90 : 0 });
+    }
+  }
+  return out;
+}
+
+/* ============ 바구니 만들기 ============ */
+function buildTray(w) {
+  const want = w.diff === 3 ? 12 : 8, map = new Map();
+  const add = b => { if (map.size < want) map.set(keyOf(b), b); };
+  w.rule.forEach(b => add(b));
+  const uniq = [...new Map(w.rule.map(b => [keyOf(b), b])).values()];
+  uniq.forEach(b => {
+    add(B(b.shape, COLOR_KEYS[(COLOR_KEYS.indexOf(b.color) + 1) % COLOR_KEYS.length]));
+    add(B(SHAPES[(SHAPES.indexOf(b.shape) + 1) % SHAPES.length], b.color));
+  });
+  uniq.forEach(b => {
+    add(B(b.shape, COLOR_KEYS[(COLOR_KEYS.indexOf(b.color) + 3) % COLOR_KEYS.length]));
+    add(B(SHAPES[(SHAPES.indexOf(b.shape) + 3) % SHAPES.length], b.color));
+  });
+  let guard = 0;
+  while (map.size < want && guard++ < 200) add(B(pick(SHAPES), pick(COLOR_KEYS)));
+  const arr = [...map.values()];
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+
+/* ============ 작품 선택 ============ */
+function selectWork(tab, idx) {
+  closeModal();
+  state.tab = tab; state.idx = idx; state.placed = 0; state.wrong = 0; state.session++;
+  state.landing.clear();
+  const w = cur();
+  state.tray = buildTray(w);
+  state.pos = computeLayout(w);
+  $('stageBox').classList.remove('celebrate');
+  renderAll();
+}
+
+/* ============ 구슬 고르기 ============ */
+function fly(btn, idx, session) {
+  const svg = btn.querySelector('svg'), r = svg.getBoundingClientRect();
+  const stage = $('stageSvg'), sr = stage.getBoundingClientRect(), sc = sr.width / 800, p = state.pos[idx];
+  const tx = sr.left + p.x * sc, ty = sr.top + p.y * sc, s = (p.size * sc) / r.width;
+  const clone = document.createElement('div');
+  clone.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:60;pointer-events:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.3));`;
+  clone.innerHTML = svg.outerHTML;
+  clone.firstChild.style.cssText = 'width:100%;height:100%';
+  document.body.appendChild(clone);
+  const dx = tx - (r.left + r.width / 2), dy = ty - (r.top + r.height / 2);
+  const anim = clone.animate([
+    { transform: 'translate(0,0) scale(1) rotate(0deg)' },
+    { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 60}px) scale(${(1 + s) / 2 + 0.15}) rotate(${p.rot / 2}deg)`, offset: 0.5 },
+    { transform: `translate(${dx}px,${dy}px) scale(${s}) rotate(${p.rot}deg)` },
+  ], { duration: REDUCED ? 60 : 460, easing: 'ease-in-out' });
+  anim.onfinish = () => {
+    clone.remove();
+    if (session !== state.session) return;
+    state.landing.delete(idx);
+    const g = $('stage').querySelector(`[data-idx="${idx}"]`);
+    if (g) g.setAttribute('opacity', 1);
+  };
+}
+
+function pickBead(btn) {
+  const w = cur(), total = totalOf(w);
+  if (state.placed >= total) return;
+  const want = targetAt(state.placed);
+  if (btn.dataset.shape === want.shape && btn.dataset.color === want.color) {
+    const idx = state.placed, session = state.session;
+    state.placed++; state.wrong = 0;
+    sndCorrect(idx);
+    state.landing.add(idx);
+    renderRule(); renderStage(); updateHintBtn(); icons();
+    fly(btn, idx, session);
+    if (state.placed >= total) {
+      setTimeout(() => { if (session === state.session) finish(); }, 520);
+    } else if (state.placed % w.rule.length === 0) {
+      const n = state.placed / w.rule.length;
+      setTimeout(() => { if (session === state.session) { sndRepeat(); toast(`좋아요! 규칙 ${n}번 반복 완성`, 'good'); } }, 380);
+    }
+  } else {
+    state.wrong++;
+    sndWrong();
+    btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+    const app = $('app'); app.classList.remove('app-shake'); void app.offsetWidth; app.classList.add('app-shake');
+    const f = $('flash'); f.classList.remove('flash-on'); void f.offsetWidth; f.classList.add('flash-on');
+    toast(state.guide ? '다른 구슬이에요. 반짝이는 구슬을 찾아요!' : '다른 구슬이에요. 규칙을 다시 살펴봐요!', 'bad');
+    updateHintBtn();
+  }
+}
+
+function hint() {
+  if (state.placed >= totalOf(cur())) return;
+  const want = targetAt(state.placed);
+  const el = $('tray').querySelector(`[data-key="${keyOf(want)}"]`);
+  if (!el) return;
+  state.wrong = 0; updateHintBtn();
+  el.classList.add('hint-ring');
+  setTimeout(() => el.classList.remove('hint-ring'), 2600);
+}
+
+/* ============ 완성 ============ */
+function finish() {
+  const w = cur(), session = state.session;
+  state.done.add(w.id); saveDone();
+  renderTabs(); renderChips(); renderRule(); renderTray(); updateHintBtn(); icons();
+  sndFanfare(); fireworks();
+  const box = $('stageBox'); box.classList.remove('celebrate'); void box.offsetWidth; box.classList.add('celebrate');
+  setTimeout(() => { if (session === state.session) showModal(); }, 1000);
+}
+
+function nextWork() {
+  const list = WORKS[state.tab];
+  if (state.idx < list.length - 1) return { tab: state.tab, idx: state.idx + 1, label: '다음 작품' };
+  const other = state.tab === 'necklace' ? 'bracelet' : 'necklace';
+  return { tab: other, idx: 0, label: other === 'bracelet' ? '팔찌 만들러 가기' : '목걸이 만들러 가기' };
+}
+
+function showModal() {
+  const w = cur(), all = WORKS[state.tab].every(x => state.done.has(x.id)), nx = nextWork();
+  $('modalRoot').innerHTML = `
+    <div id="modal" class="fixed inset-0 z-[75] flex items-center justify-center bg-indigo-950/60 p-4 backdrop-blur-sm">
+      <div class="pop-in w-full max-w-md rounded-[2rem] bg-white p-6 text-center shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-500"><i data-lucide="party-popper" class="h-9 w-9"></i></div>
+        <h2 id="mTitle" class="mt-3 text-3xl font-extrabold text-slate-800">${pick(PHRASES)}</h2>
+        <p class="mt-1 text-lg text-slate-600">${w.name}을 규칙 ${w.repeat}번 반복으로 완성했어요.</p>
+        ${all ? `<p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1.5 text-lg font-extrabold text-amber-700"><i data-lucide="crown" class="h-5 w-5"></i>${TAB_INFO[state.tab].label} ${WORKS[state.tab].length}개를 모두 완성했어요!</p>` : ''}
+        <div id="modalPreview" class="mt-4 overflow-hidden rounded-2xl"></div>
+        <div class="mt-5 flex gap-3">
+          <button data-act="again" class="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-100 text-lg font-bold text-slate-700 hover:bg-slate-200"><i data-lucide="rotate-ccw" class="h-5 w-5"></i>다시 만들기</button>
+          <button data-act="next" class="inline-flex h-14 flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 text-lg font-extrabold text-white shadow-lg hover:brightness-105">${nx.label}<i data-lucide="chevron-right" class="h-5 w-5"></i></button>
+        </div>
+      </div>
+    </div>`;
+  const clone = $('stageSvg').cloneNode(true);
+  clone.removeAttribute('id');
+  $('modalPreview').appendChild(clone);
+  icons();
+  $('modalRoot').querySelector('[data-act="next"]').focus();
+}
+function closeModal() { $('modalRoot').innerHTML = ''; }
+
+/* ============ 이벤트 ============ */
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) selectWork(b.dataset.tab, 0); });
+$('chips').addEventListener('click', e => { const b = e.target.closest('[data-idx]'); if (b) selectWork(state.tab, +b.dataset.idx); });
+$('tray').addEventListener('click', e => { const b = e.target.closest('.bead-btn'); if (b) { audio(); pickBead(b); } });
+$('btnHint').addEventListener('click', () => { audio(); hint(); });
+$('btnReset').addEventListener('click', () => { if (MODE === 'basic') selectWork(state.tab, state.idx); });
+$('btnGuide').addEventListener('click', () => { state.guide = !state.guide; renderHeader(); renderRule(); renderStage(); icons(); });
+$('btnSound').addEventListener('click', () => { state.sound = !state.sound; renderHeader(); icons(); if (state.sound) sndCorrect(0); });
+$('modalRoot').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (b) {
+    if (b.dataset.act === 'again') selectWork(state.tab, state.idx);
+    else { const nx = nextWork(); selectWork(nx.tab, nx.idx); }
+  } else if (e.target.id === 'modal') closeModal();
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+
+/* =====================================================================
+   추가 기능 1) 공통 도구: 놀이 모드, 줄 위치, 배치 계산, 이미지 저장
+   ===================================================================== */
+let MODE = 'basic';
+const MODES = {
+  basic: { label: '기본 놀이', sub: '한 줄 규칙 꿰기', icon: 'sparkles', title: '규칙을 보고 구슬을 눌러서 꿰어 보세요' },
+  adv:   { label: '심화 놀이', sub: '두 줄 교차하기', icon: 'infinity', title: '줄을 고르고 구슬을 꿰어 두 줄을 교차해 보세요' },
+  free:  { label: '나만의 작품', sub: '팔찌·목걸이 만들기', icon: 'palette', title: '마음대로 구슬을 꿰어 나만의 작품을 만들어요' },
+};
+
+// 줄 위치: 바깥쪽(O) · 안쪽(I) · 두 줄 교차(X)
+const LINE = {
+  O: { name: '바깥쪽 줄', short: '바깥', chip: 'bg-sky-100 text-sky-700', on: 'border-sky-500 bg-sky-50 text-sky-800 shadow-md', ghost: '#7dd3fc', dot: '#0ea5e9' },
+  I: { name: '안쪽 줄',   short: '안쪽', chip: 'bg-pink-100 text-pink-700', on: 'border-pink-500 bg-pink-50 text-pink-800 shadow-md', ghost: '#f9a8d4', dot: '#ec4899' },
+  X: { name: '두 줄 교차', short: '교차', chip: 'bg-amber-100 text-amber-800', on: 'border-amber-500 bg-amber-50 text-amber-900 shadow-md', ghost: '#fcd34d', dot: '#f59e0b' },
+};
+const LINE_KEYS = ['O', 'I', 'X'];
+
+const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function lineIcon(l) {
+  const dot = (x, y, which) => which === l
+    ? `<circle cx="${x}" cy="${y}" r="6.5" fill="${LINE[l].dot}" stroke="#fff" stroke-width="2"/>`
+    : `<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 64 40" class="h-9 w-14" aria-hidden="true">
+    <path d="M4 20 Q32 -4 60 20" fill="none" stroke="#e0b64a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M4 20 Q32 44 60 20" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+    ${dot(4, 20, 'X')}${dot(60, 20, 'X')}${dot(32, 8, 'O')}${dot(32, 32, 'I')}</svg>`;
+}
+function lineButtons(selected, want, attr) {
+  return LINE_KEYS.map(l => {
+    const on = selected === l, now = want === l;
+    return `<button ${attr}="${l}" aria-pressed="${on}" class="flex flex-col items-center gap-0.5 rounded-2xl border-2 px-1 py-2 text-sm font-extrabold transition sm:text-base ${on ? LINE[l].on : 'border-slate-200 bg-white text-slate-600 hover:border-violet-300'} ${now ? 'line-now' : ''}">${lineIcon(l)}<span>${LINE[l].name}</span></button>`;
+  }).join('');
+}
+
+// 팔찌(원)와 목걸이(곡선)의 위치·방향 계산
+function geom(type, R = 168) {
+  if (type === 'bracelet') {
+    return { L: 2 * Math.PI * R, R, at(len) {
+      const th = -Math.PI / 2 + len / R, nx = Math.cos(th), ny = Math.sin(th);
+      return { x: 400 + R * nx, y: 240 + R * ny, nx, ny, ang: th * 180 / Math.PI + 90 };
+    } };
+  }
+  const mp = $('mp'); mp.setAttribute('d', NECK_D);
+  const L = mp.getTotalLength();
+  return { L, at(len) {
+    const l = Math.max(0, Math.min(L, len)), p = mp.getPointAtLength(l);
+    const q = mp.getPointAtLength(Math.min(L, l + 2)), o = mp.getPointAtLength(Math.max(0, l - 2));
+    const dx = q.x - o.x, dy = q.y - o.y, n = Math.hypot(dx, dy) || 1;
+    return { x: p.x, y: p.y, nx: -dy / n, ny: dx / n, ang: Math.atan2(dy, dx) * 180 / Math.PI };
+  } };
+}
+const circleD = R => `M ${400 - R} 240 A ${R} ${R} 0 1 0 ${400 + R} 240 A ${R} ${R} 0 1 0 ${400 - R} 240 Z`;
+function along(g, a, b, step) {
+  const n = Math.max(1, Math.ceil((b - a) / step)), out = [];
+  for (let i = 1; i < n; i++) { const p = g.at(a + (b - a) * i / n); out.push({ x: p.x, y: p.y }); }
+  return out;
+}
+const polyD = (pts, closed) => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + (closed ? ' Z' : '');
+
+// 한 줄 배치 (나만의 작품)
+function layoutOne(beads, type) {
+  const isB = type === 'bracelet', g = geom(type, 168), N = beads.length;
+  const avail = isB ? g.L : g.L * 0.84, sp = Math.min(52, avail / Math.max(N, 1));
+  const start = isB ? -N * sp / 2 : g.L * 0.08 + (avail - N * sp) / 2, size = Math.min(52, sp * 0.9);
+  const pos = beads.map((b, i) => { const p = g.at(start + sp * (i + 0.5)); return { x: p.x, y: p.y, size, rot: b.shape === 'tube' ? p.ang : 0 }; });
+  return { pos, strings: [isB ? circleD(168) : NECK_D], clasp: !isB };
+}
+
+// 두 줄 교차 배치: 바깥/안쪽 구슬은 고리를 만들고, 교차 구슬에서 두 줄이 만나 자리를 바꿉니다
+function layoutTwo(slots, type, fit) {
+  const isB = type === 'bracelet', R = 152, g = geom(type, R);
+  if (!slots.length) { const d = isB ? circleD(R) : NECK_D; return { pos: [], strings: [d], clasp: !isB }; }
+  const segs = [];
+  for (let i = 0; i < slots.length;) {
+    if (slots[i].line === 'X') { segs.push({ kind: 'X', idx: i }); i++; continue; }
+    const s = { kind: 'L', O: [], I: [] };
+    while (i < slots.length && slots[i].line !== 'X') { s[slots[i].line].push(i); i++; }
+    segs.push(s);
+  }
+  const unitsOf = s => s.kind === 'X' ? 1 : Math.max(s.O.length, s.I.length) + 0.8;
+  const S = segs.reduce((a, s) => a + unitsOf(s), 0);
+  const avail = isB ? g.L : g.L * 0.84;
+  const sp = fit ? avail / S : Math.min(54, avail / S);
+  const full = isB && (fit || S * sp >= g.L - 0.5);
+  const start = isB ? (full ? 0 : -S * sp / 2) : g.L * 0.08 + (avail - S * sp) / 2;
+  const size = Math.min(46, sp * 0.84);
+  const ampOf = n => Math.min(isB ? 46 : 54, sp * ((isB ? 0.36 : 0.42) + (isB ? 0.26 : 0.3) * Math.max(1, n)));
+  const pt = (t, off) => { const p = g.at(start + t * sp); return { x: p.x + p.nx * off, y: p.y + p.ny * off, ang: p.ang }; };
+  const pos = new Array(slots.length), w1 = [], w2 = [];
+  const put = (i, t, off) => {
+    const q = pt(t, off), f = isB ? Math.max(0.72, Math.min(1, (R + off) / R + 0.08)) : 1;
+    pos[i] = { x: q.x, y: q.y, size: size * f, rot: slots[i].b.shape === 'tube' ? q.ang : 0 };
+    return { t, off };
+  };
+  let c = 0, k = 0;
+  segs.forEach(s => {
+    if (s.kind === 'X') { const q = put(s.idx, c + 0.5, 0); w1.push(q); w2.push(q); c += 1; return; }
+    const m = unitsOf(s), a = ampOf(Math.max(s.O.length, s.I.length));
+    [['O', 1], ['I', -1]].forEach(([side, sg]) => {
+      const arr = s[side], own = ((k % 2 === 0) === (side === 'O')) ? w1 : w2; // 교차할 때마다 두 줄이 자리를 바꿈
+      if (!arr.length) { own.push({ t: c + m / 2, off: sg * a * 0.3 }); return; }
+      arr.forEach((i, j) => { const u = (j + 1) / (arr.length + 1); own.push(put(i, c + m * u, sg * a * Math.sin(Math.PI * u))); });
+    });
+    k++; c += m;
+  });
+  // 줄은 (길이 t, 벗어난 거리 off) 공간에서 부드럽게 이은 뒤 촘촘히 찍어 그립니다 → 팔찌가 둥글게 유지됨
+  const sample = w => {
+    const wp = full ? w : [{ t: 0, off: 0 }, ...w, { t: S, off: 0 }], n = wp.length;
+    const P = i => {
+      if (!full) return wp[Math.max(0, Math.min(n - 1, i))];
+      const r = ((i % n) + n) % n;
+      return { t: wp[r].t + Math.floor(i / n) * S, off: wp[r].off };
+    };
+    const slope = i => {
+      if (!full && (i <= 0 || i >= n - 1)) return 0;
+      const a = P(i - 1), b = P(i + 1);
+      return b.t - a.t > 1e-6 ? (b.off - a.off) / (b.t - a.t) : 0;
+    };
+    const pts = [];
+    for (let i = 0; i < (full ? n : n - 1); i++) {
+      const a = P(i), b = P(i + 1), h = b.t - a.t, ma = slope(i), mb = slope(i + 1);
+      const steps = Math.max(2, Math.ceil(h * sp / 6));
+      for (let j = 0; j < steps; j++) {
+        const u = j / steps, u2 = u * u, u3 = u2 * u;
+        const off = (2 * u3 - 3 * u2 + 1) * a.off + (u3 - 2 * u2 + u) * h * ma + (-2 * u3 + 3 * u2) * b.off + (u3 - u2) * h * mb;
+        pts.push(pt(a.t + h * u, off));
+      }
+    }
+    if (!full) pts.push(pt(S, 0));
+    return pts;
+  };
+  const endLen = start + S * sp;
+  const strings = [w1, w2].map(w => {
+    const pts = sample(w);
+    if (full) return polyD(pts, true);
+    if (isB) return polyD([...pts, ...along(g, endLen, start + g.L, 6)], true);
+    return polyD([g.at(0), ...along(g, 0, start, 6), ...pts, ...along(g, endLen, g.L, 6), g.at(g.L)], false);
+  });
+  return { pos, strings, clasp: !isB };
+}
+
+// 무대(SVG) 조각
+const BGS = {
+  night: { label: '밤하늘', fill: 'url(#stageBg)', stars: true, ink: '#ffffff', sub: '#b9aee6', sw: 'linear-gradient(135deg,#4b3b8c,#1a1440)' },
+  pink:  { label: '꽃분홍', fill: 'url(#bgPink)', ink: '#9d174d', sub: '#db2777', sw: 'linear-gradient(135deg,#fff1f7,#fbcfe8)' },
+  sky:   { label: '하늘빛', fill: 'url(#bgSky)', ink: '#075985', sub: '#0284c7', sw: 'linear-gradient(135deg,#f0f9ff,#bae6fd)' },
+  paper: { label: '도화지', fill: 'url(#bgPaper)', ink: '#5b4636', sub: '#a0826a', sw: 'linear-gradient(135deg,#fffdf7,#f3e7d3)' },
+};
+const STRS = {
+  gold:   { label: '금빛 줄', c: ['#f4d58d', '#8fe3ff'] },
+  silver: { label: '은빛 줄', c: ['#e8edf4', '#aab6c8'] },
+  pink:   { label: '분홍 줄', c: ['#ff9ccf', '#b794ff'] },
+  brown:  { label: '가죽 끈', c: ['#a8703f', '#6f4a2a'] },
+};
+function addDefs() {
+  $('defsInner').insertAdjacentHTML('beforeend',
+    `<radialGradient id="bgPink" cx=".5" cy=".45" r=".8"><stop offset="0" stop-color="#fff5fa"/><stop offset="1" stop-color="#fbcfe8"/></radialGradient>` +
+    `<radialGradient id="bgSky" cx=".5" cy=".45" r=".8"><stop offset="0" stop-color="#f5fbff"/><stop offset="1" stop-color="#bae6fd"/></radialGradient>` +
+    `<radialGradient id="bgPaper" cx=".5" cy=".45" r=".8"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#f1e4cd"/></radialGradient>`);
+}
+function bgLayer(key) {
+  const b = BGS[key];
+  let s = `<rect width="800" height="480" fill="${b.fill}"/>`;
+  if (b.stars) STARS.forEach((p, i) => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]}" fill="#fff" opacity=".45" class="${i % 4 === 0 ? 'tw' : i % 4 === 1 ? 'tw2' : ''}"/>`; });
+  return s;
+}
+function stringsSVG(ds, cols) {
+  let s = '';
+  ds.forEach(d => { s += `<path d="${d}" fill="none" stroke="#000" stroke-opacity=".22" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>`; });
+  for (let i = ds.length - 1; i >= 0; i--) s += `<path d="${ds[i]}" fill="none" stroke="${cols[i] || cols[0]}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return s;
+}
+const claspSVG = col => [[100, 60], [700, 60]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="${col}" stroke="#000" stroke-opacity=".3" stroke-width="2"/><circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#2b2159"/>`).join('');
+function beadG(p, b, attrs = '', innerCls = '') {
+  const h = p.size / 2;
+  return `<g ${attrs} transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(p.rot || 0).toFixed(1)})" filter="url(#beadShadow)"><g class="${innerCls}"><svg x="${-h}" y="${-h}" width="${p.size}" height="${p.size}" viewBox="0 0 100 100" overflow="visible">${beadInner(b.shape, b.color)}</svg></g></g>`;
+}
+
+// 비행 애니메이션 (바구니 → 무대)
+function flyTo(btn, p, svgEl, done) {
+  const svg = btn.querySelector('svg'), r = svg.getBoundingClientRect();
+  const sr = svgEl.getBoundingClientRect(), sc = sr.width / 800;
+  const tx = sr.left + p.x * sc, ty = sr.top + p.y * sc, s = (p.size * sc) / r.width;
+  const clone = document.createElement('div');
+  clone.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:60;pointer-events:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.3));`;
+  clone.innerHTML = svg.outerHTML;
+  clone.firstChild.style.cssText = 'width:100%;height:100%';
+  document.body.appendChild(clone);
+  const dx = tx - (r.left + r.width / 2), dy = ty - (r.top + r.height / 2);
+  const anim = clone.animate([
+    { transform: 'translate(0,0) scale(1) rotate(0deg)' },
+    { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 60}px) scale(${(1 + s) / 2 + 0.15}) rotate(${p.rot / 2}deg)`, offset: 0.5 },
+    { transform: `translate(${dx}px,${dy}px) scale(${s}) rotate(${p.rot}deg)` },
+  ], { duration: REDUCED ? 60 : 460, easing: 'ease-in-out' });
+  anim.onfinish = () => { clone.remove(); done(); };
+}
+function wrongFx() {
+  const app = $('app'); app.classList.remove('app-shake'); void app.offsetWidth; app.classList.add('app-shake');
+  const f = $('flash'); f.classList.remove('flash-on'); void f.offsetWidth; f.classList.add('flash-on');
+}
+function shakeEl(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+// 이미지(PNG)로 저장
+function savePNG(svgEl, name) {
+  if (!svgEl) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const fname = (String(name).replace(/[\\/:*?"<>|]/g, '').trim() || '구슬 작품');
+  const clone = svgEl.cloneNode(true);
+  clone.removeAttribute('id'); clone.removeAttribute('class');
+  clone.setAttribute('xmlns', NS); clone.setAttribute('width', 1600); clone.setAttribute('height', 960);
+  clone.querySelectorAll('[class]').forEach(e => e.removeAttribute('class'));
+  clone.querySelectorAll('g[data-idx]').forEach(e => e.setAttribute('opacity', 1));
+  const defs = $('defsInner').cloneNode(true); defs.removeAttribute('id');
+  clone.insertBefore(defs, clone.firstChild);
+  const st = document.createElementNS(NS, 'style');
+  st.textContent = "text{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}";
+  clone.insertBefore(st, clone.firstChild);
+  const d = new Date(), ft = document.createElementNS(NS, 'text');
+  [['x', 786], ['y', 468], ['text-anchor', 'end'], ['font-size', 13], ['font-weight', 600], ['fill', '#8b80c9']].forEach(([k, v]) => ft.setAttribute(k, v));
+  ft.textContent = `구슬 꿰기 놀이 · ${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+  clone.appendChild(ft);
+  const str = new XMLSerializer().serializeToString(clone);
+  const dl = (url, file) => {
+    const a = document.createElement('a'); a.href = url; a.download = file;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('그림으로 저장했어요!', 'good');
+  };
+  const fallback = () => dl(URL.createObjectURL(new Blob([str], { type: 'image/svg+xml' })), fname + '.svg');
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas'); c.width = 1600; c.height = 960;
+      c.getContext('2d').drawImage(img, 0, 0, 1600, 960);
+      c.toBlob(b => b ? dl(URL.createObjectURL(b), fname + '.png') : fallback(), 'image/png');
+    } catch (e) { fallback(); }
+  };
+  img.onerror = fallback;
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+}
+
+/* =====================================================================
+   추가 기능 2) 심화 놀이: 두 줄 교차로 다양한 모양 만들기
+   ===================================================================== */
+const S2 = (line, shape, color) => ({ line, b: B(shape, color) });
+const ADV = {
+  necklace: [
+    { id: 'an1', type: 'necklace', name: '하트 사다리 목걸이', diff: 1, repeat: 6, rule: [S2('O','heart','pink'), S2('I','heart','pink'), S2('X','circle','yellow')] },
+    { id: 'an2', type: 'necklace', name: '물결 목걸이',       diff: 2, repeat: 3, rule: [S2('O','drop','sky'), S2('X','circle','pink'), S2('I','drop','sky'), S2('X','circle','pink')] },
+    { id: 'an3', type: 'necklace', name: '포도송이 목걸이',   diff: 2, repeat: 4, rule: [S2('O','circle','purple'), S2('O','circle','purple'), S2('I','circle','purple'), S2('I','circle','purple'), S2('X','heart','green')] },
+    { id: 'an4', type: 'necklace', name: '별빛 그물 목걸이',  diff: 3, repeat: 4, rule: [S2('O','star','yellow'), S2('O','circle','orange'), S2('I','star','yellow'), S2('I','circle','orange'), S2('X','diamond','red')] },
+  ],
+  bracelet: [
+    { id: 'ab1', type: 'bracelet', name: '사다리 팔찌', diff: 1, repeat: 6, rule: [S2('O','circle','sky'), S2('I','circle','sky'), S2('X','star','yellow')] },
+    { id: 'ab2', type: 'bracelet', name: '물결 팔찌',   diff: 2, repeat: 4, rule: [S2('O','circle','blue'), S2('X','square','sky'), S2('I','circle','blue'), S2('X','square','sky')] },
+    { id: 'ab3', type: 'bracelet', name: '꽃잎 팔찌',   diff: 2, repeat: 5, rule: [S2('O','circle','pink'), S2('O','circle','pink'), S2('I','circle','pink'), S2('I','circle','pink'), S2('X','flower','orange')] },
+    { id: 'ab4', type: 'bracelet', name: '나비 팔찌',   diff: 3, repeat: 5, rule: [S2('O','drop','purple'), S2('I','drop','purple'), S2('X','diamond','blue'), S2('X','circle','sky')] },
+  ],
+};
+const ADV_TAB = {
+  necklace: { label: '두 줄 목걸이', icon: 'gem' },
+  bracelet: { label: '두 줄 팔찌', icon: 'circle-dot' },
+};
+const adv = { tab: 'necklace', idx: 0, placed: 0, wrong: 0, line: null, tray: [], lay: null, landing: new Set(), session: 0 };
+const advCur = () => ADV[adv.tab][adv.idx];
+const advTotal = () => totalOf(advCur());
+const advTarget = i => advCur().rule[i % advCur().rule.length];
+
+function selectAdv(tab, idx) {
+  closeModal();
+  Object.assign(adv, { tab, idx, placed: 0, wrong: 0, line: null });
+  adv.session++; adv.landing.clear();
+  const w = advCur(), slots = Array.from({ length: totalOf(w) }, (_, i) => w.rule[i % w.rule.length]);
+  adv.tray = buildTray({ rule: w.rule.map(s => s.b), diff: w.diff });
+  adv.lay = layoutTwo(slots, w.type, true);
+  $('advStageBox').classList.remove('celebrate');
+  renderAdvAll();
+}
+
+function renderAdvTabs() {
+  $('advTabs').innerHTML = Object.keys(ADV_TAB).map(t => {
+    const on = adv.tab === t, n = ADV[t].filter(w => state.done.has(w.id)).length, all = n === ADV[t].length;
+    return `<button data-atab="${t}" class="flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-3 text-lg font-extrabold transition sm:flex-none ${on ? 'bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow-md' : 'text-slate-600 hover:bg-violet-50'}">
+      <i data-lucide="${ADV_TAB[t].icon}" class="h-5 w-5"></i>${ADV_TAB[t].label}
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm ${on ? 'bg-white/25' : 'bg-violet-100 text-violet-700'}">${all ? '<i data-lucide="crown" class="h-4 w-4 text-amber-400"></i>' : ''}${n}/${ADV[t].length}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderAdvChips() {
+  $('advChips').innerHTML = ADV[adv.tab].map((w, i) => {
+    const on = adv.idx === i, done = state.done.has(w.id);
+    const stars = [1, 2, 3].map(n => `<i data-lucide="star" class="h-3.5 w-3.5 ${n <= w.diff ? 'star-on' : on ? 'text-white/40' : 'text-slate-300'}"></i>`).join('');
+    const minis = [...new Map(w.rule.map(s => [keyOf(s.b), s.b])).values()].slice(0, 3).map(b => `<span class="block h-6 w-6">${beadSVG(b.shape, b.color, 'class="h-full w-full"')}</span>`).join('');
+    return `<button data-aidx="${i}" class="flex items-center gap-2 rounded-2xl border-2 px-3 py-2 text-base font-bold transition ${on ? 'border-violet-600 bg-violet-600 text-white shadow-md' : 'border-violet-100 bg-white text-slate-700 hover:border-violet-300'}">
+      <span class="flex -space-x-1">${minis}</span><span class="flex flex-col items-start leading-tight">${w.name}<span class="flex">${stars}</span></span>
+      ${done ? `<i data-lucide="circle-check" class="h-5 w-5 ${on ? 'text-emerald-300' : 'text-emerald-500'}"></i>` : ''}
+    </button>`;
+  }).join('');
+}
+
+const CROSS_DEMO = `<svg viewBox="0 0 80 48" class="h-12 w-20 shrink-0" aria-hidden="true">
+  <path d="M4 8 C26 8 30 24 40 24 S54 40 76 40" fill="none" stroke="#e0b64a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M4 40 C26 40 30 24 40 24 S54 8 76 8" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="40" cy="24" r="9" fill="url(#g-yellow)" stroke="#c99400" stroke-width="2"/></svg>`;
+
+function renderAdvRule() {
+  const w = advCur(), len = w.rule.length, total = totalOf(w), complete = adv.placed >= total;
+  const step = complete ? len : adv.placed % len;
+  const rep = complete ? w.repeat - 1 : Math.floor(adv.placed / len);
+  const tiles = w.rule.map((s, i) => {
+    const done = complete || i < step, now = !complete && i === step && state.guide, L = LINE[s.line];
+    const arrow = i > 0 ? `<div class="mt-6 flex h-14 items-center"><i data-lucide="arrow-right" class="h-5 w-5 text-amber-400"></i></div>` : '';
+    return `${arrow}<div class="flex w-[76px] flex-col items-center gap-1">
+      <span class="rounded-full px-2 py-0.5 text-xs font-extrabold ${L.chip}">${L.short}</span>
+      <div class="relative h-14 w-14 rounded-2xl border-2 bg-white p-1.5 transition ${now ? 'rule-now' : done && !complete ? 'border-slate-200 opacity-40' : 'border-amber-100'}">
+        ${beadSVG(s.b.shape, s.b.color, 'class="h-full w-full"')}
+        ${done ? `<span class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white"><i data-lucide="check" class="h-3 w-3"></i></span>` : ''}
+      </div>
+      <span class="break-keep text-center text-sm font-medium leading-tight text-slate-600">${beadName(s.b)}</span>
+    </div>`;
+  }).join('');
+  const dots = Array.from({ length: w.repeat }, (_, r) => {
+    const d = complete || r < Math.floor(adv.placed / len), c = !complete && r === Math.floor(adv.placed / len);
+    return `<span class="h-4 w-4 rounded-full border-2 ${d ? 'border-emerald-500 bg-emerald-500' : c ? 'border-amber-500 bg-amber-200' : 'border-amber-200 bg-white'}"></span>`;
+  }).join('');
+  $('advRule').innerHTML = `
+    <div class="flex items-center justify-between">
+      <h2 class="flex items-center gap-2 text-lg font-extrabold text-amber-900"><i data-lucide="clipboard-list" class="h-5 w-5"></i>규칙</h2>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-200 px-3 py-1 text-base font-extrabold text-amber-900"><i data-lucide="repeat" class="h-4 w-4"></i>${w.repeat}번 반복</span>
+    </div>
+    <div class="mt-3 flex flex-wrap items-start gap-x-1 gap-y-3">${tiles}</div>
+    <div class="mt-4 flex items-center gap-2 border-t border-amber-200 pt-3">
+      <span class="text-base font-bold text-amber-900">반복</span>
+      <span class="flex flex-wrap items-center gap-1.5">${dots}</span>
+      <span class="ml-auto text-base font-bold text-amber-900">${rep + 1} / ${w.repeat}</span>
+    </div>`;
+}
+
+function renderAdvHow() {
+  const item = (l, text) => `<div class="flex items-center gap-2 rounded-2xl bg-slate-50 p-2">${lineIcon(l)}<p class="text-sm leading-snug text-slate-700"><b class="${LINE[l].chip} rounded px-1">${LINE[l].short}</b> ${text}</p></div>`;
+  $('advHow').innerHTML = `
+    <h2 class="flex items-center gap-2 text-lg font-extrabold"><i data-lucide="infinity" class="h-5 w-5 text-violet-500"></i>두 줄 교차, 이렇게 꿰어요</h2>
+    <div class="mt-3 grid gap-2 sm:grid-cols-3">
+      ${item('O', '바깥쪽 줄에 하나씩 꿰어요.')}
+      ${item('I', '안쪽 줄에 하나씩 꿰어요.')}
+      ${item('X', '두 줄을 한 구슬에 함께 꿰어요.')}
+    </div>
+    <div class="mt-3 flex items-center gap-3 rounded-2xl bg-amber-50 p-3">
+      ${CROSS_DEMO}
+      <p class="text-base leading-snug text-amber-900"><b>교차</b>는 두 줄을 양쪽에서 한 구슬에 함께 넣는 거예요. 교차하면 두 줄이 서로 자리를 바꿔서 고리 모양이 생겨요!</p>
+    </div>`;
+}
+
+function renderAdvStage() {
+  const w = advCur(), lay = adv.lay, N = lay.pos.length, isN = w.type === 'necklace', cols = STRS.gold.c;
+  let s = `<svg id="advStageSvg" viewBox="0 0 800 480" class="block h-auto w-full" role="img" aria-label="${w.name}">` + bgLayer('night');
+  s += stringsSVG(lay.strings, cols);
+  if (lay.clasp) s += claspSVG(cols[0]);
+  for (let i = adv.placed; i < N; i++) {
+    const p = lay.pos[i], L = LINE[advTarget(i).line];
+    s += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(p.size / 2 - 3).toFixed(1)}" fill="rgba(255,255,255,.06)" stroke="${L.ghost}" stroke-opacity=".6" stroke-width="2" stroke-dasharray="5 6" class="${i === adv.placed && state.guide ? 'slot-next' : ''}"/>`;
+  }
+  for (let i = 0; i < adv.placed; i++) s += beadG(lay.pos[i], advTarget(i).b, `data-idx="${i}" opacity="${adv.landing.has(i) ? 0 : 1}"`);
+  const cy = isN ? 200 : 248, big = isN ? 60 : 44, small = isN ? 28 : 20;
+  s += `<text x="400" y="${cy}" text-anchor="middle" fill="#fff" font-weight="800"><tspan font-size="${big}">${adv.placed}</tspan><tspan font-size="${small}" fill="#b9aee6" font-weight="600"> / ${N}</tspan></text>`;
+  s += `<text x="400" y="${cy + (isN ? 32 : 24)}" text-anchor="middle" fill="#b9aee6" font-size="${isN ? 22 : 17}" font-weight="600">꿴 구슬</text></svg>`;
+  $('advStage').innerHTML = s;
+
+  const stars = [1, 2, 3].map(n => `<i data-lucide="star" class="h-5 w-5 ${n <= w.diff ? 'star-on' : 'text-white/30'}"></i>`).join('');
+  $('advStageHead').innerHTML = `
+    <div class="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-lg font-extrabold text-white backdrop-blur"><i data-lucide="${ADV_TAB[w.type].icon}" class="h-5 w-5"></i>${w.name}</div>
+    <div class="flex items-center gap-0.5 rounded-full bg-white/10 px-3 py-2" title="난이도" aria-label="난이도 ${w.diff}단계">${stars}</div>`;
+}
+
+function renderAdvLines() {
+  const complete = adv.placed >= advTotal(), want = !complete && state.guide ? advTarget(adv.placed).line : null;
+  $('advLines').innerHTML = lineButtons(adv.line, want, 'data-line');
+}
+function renderAdvTray() {
+  const complete = adv.placed >= advTotal();
+  $('advTray').className = `grid grid-cols-4 gap-3 ${complete ? 'pointer-events-none opacity-50' : ''}`;
+  $('advTray').innerHTML = adv.tray.map(b => `
+    <button class="bead-btn aspect-square rounded-2xl border-2 border-violet-100 bg-white p-2 shadow-sm transition hover:scale-110 hover:border-violet-300 active:scale-95"
+      data-key="${keyOf(b)}" data-shape="${b.shape}" data-color="${b.color}" aria-label="${beadName(b)}" title="${beadName(b)}">
+      ${beadSVG(b.shape, b.color, 'class="h-full w-full"')}
+    </button>`).join('');
+}
+function updateAdvHint() { $('advHint').classList.toggle('hint-pulse', adv.wrong >= 3); }
+function renderAdvAll() { renderAdvTabs(); renderAdvChips(); renderAdvRule(); renderAdvStage(); renderAdvLines(); renderAdvTray(); updateAdvHint(); icons(); }
+
+function pickAdv(btn) {
+  const w = advCur(), total = advTotal();
+  if (adv.placed >= total) return;
+  const want = advTarget(adv.placed);
+  if (!adv.line) {
+    shakeEl($('advLines'));
+    toast('먼저 어느 줄에 꿸지 골라요!', 'bad');
+    return;
+  }
+  const beadOK = btn.dataset.shape === want.b.shape && btn.dataset.color === want.b.color, lineOK = adv.line === want.line;
+  if (beadOK && lineOK) {
+    const idx = adv.placed, session = adv.session;
+    adv.placed++; adv.wrong = 0;
+    sndCorrect(idx);
+    adv.landing.add(idx);
+    renderAdvRule(); renderAdvStage(); renderAdvLines(); updateAdvHint(); icons();
+    flyTo(btn, adv.lay.pos[idx], $('advStageSvg'), () => {
+      if (session !== adv.session) return;
+      adv.landing.delete(idx);
+      const g = $('advStage').querySelector(`[data-idx="${idx}"]`);
+      if (g) g.setAttribute('opacity', 1);
+    });
+    if (adv.placed >= total) {
+      setTimeout(() => { if (session === adv.session) finishAdv(); }, 520);
+    } else if (adv.placed % w.rule.length === 0) {
+      const n = adv.placed / w.rule.length;
+      setTimeout(() => { if (session === adv.session) { sndRepeat(); toast(`좋아요! 규칙 ${n}번 반복 완성`, 'good'); } }, 380);
+    }
+  } else {
+    adv.wrong++;
+    sndWrong(); wrongFx();
+    if (beadOK) {
+      shakeEl($('advLines'));
+      const nm = LINE[want.line].name;
+      toast(state.guide ? `구슬은 맞아요! ‘${nm}’${josa(nm, '을', '를')} 골라요` : '구슬은 맞아요! 줄을 다시 살펴봐요', 'bad');
+    } else {
+      shakeEl(btn);
+      toast(state.guide ? '다른 구슬이에요. 반짝이는 구슬을 찾아요!' : '다른 구슬이에요. 규칙을 다시 살펴봐요!', 'bad');
+    }
+    renderAdvLines(); updateAdvHint(); icons();
+  }
+}
+
+function hintAdv() {
+  if (adv.placed >= advTotal()) return;
+  const want = advTarget(adv.placed);
+  adv.wrong = 0; updateAdvHint();
+  [$('advTray').querySelector(`[data-key="${keyOf(want.b)}"]`), $('advLines').querySelector(`[data-line="${want.line}"]`)].forEach(el => {
+    if (!el) return;
+    el.classList.add('hint-ring');
+    setTimeout(() => el.classList.remove('hint-ring'), 2600);
+  });
+}
+
+function nextAdv() {
+  const list = ADV[adv.tab];
+  if (adv.idx < list.length - 1) return { tab: adv.tab, idx: adv.idx + 1, label: '다음 작품' };
+  const other = adv.tab === 'necklace' ? 'bracelet' : 'necklace';
+  return { tab: other, idx: 0, label: other === 'bracelet' ? '팔찌 만들러 가기' : '목걸이 만들러 가기' };
+}
+
+function finishAdv() {
+  const w = advCur(), session = adv.session;
+  state.done.add(w.id); saveDone();
+  renderAdvTabs(); renderAdvChips(); renderAdvRule(); renderAdvLines(); renderAdvTray(); updateAdvHint(); icons();
+  sndFanfare(); fireworks();
+  const box = $('advStageBox'); box.classList.remove('celebrate'); void box.offsetWidth; box.classList.add('celebrate');
+  setTimeout(() => { if (session === adv.session && MODE === 'adv') showAdvModal(); }, 1000);
+}
+
+function showAdvModal() {
+  const w = advCur(), all = ADV[adv.tab].every(x => state.done.has(x.id)), nx = nextAdv();
+  $('modalRoot').innerHTML = `
+    <div id="modal" class="fixed inset-0 z-[75] flex items-center justify-center bg-indigo-950/60 p-4 backdrop-blur-sm">
+      <div class="pop-in w-full max-w-md rounded-[2rem] bg-white p-6 text-center shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-500"><i data-lucide="party-popper" class="h-9 w-9"></i></div>
+        <h2 id="mTitle" class="mt-3 text-3xl font-extrabold text-slate-800">두 줄 교차 성공!</h2>
+        <p class="mt-1 text-lg text-slate-600">${w.name}${josa(w.name, '을', '를')} 규칙 ${w.repeat}번 반복으로 완성했어요.</p>
+        ${all ? `<p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1.5 text-lg font-extrabold text-amber-700"><i data-lucide="crown" class="h-5 w-5"></i>${ADV_TAB[adv.tab].label} ${ADV[adv.tab].length}개를 모두 완성했어요!</p>` : ''}
+        <div id="modalPreview" class="mt-4 overflow-hidden rounded-2xl"></div>
+        <button data-aact="save" class="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-violet-100 text-lg font-bold text-violet-700 hover:bg-violet-200"><i data-lucide="download" class="h-5 w-5"></i>이미지로 저장하기</button>
+        <div class="mt-3 flex gap-3">
+          <button data-aact="again" class="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-100 text-lg font-bold text-slate-700 hover:bg-slate-200"><i data-lucide="rotate-ccw" class="h-5 w-5"></i>다시 만들기</button>
+          <button data-aact="next" class="inline-flex h-14 flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 text-lg font-extrabold text-white shadow-lg hover:brightness-105">${nx.label}<i data-lucide="chevron-right" class="h-5 w-5"></i></button>
+        </div>
+      </div>
+    </div>`;
+  const clone = $('advStageSvg').cloneNode(true);
+  clone.removeAttribute('id');
+  $('modalPreview').appendChild(clone);
+  icons();
+  $('modalRoot').querySelector('[data-aact="next"]').focus();
+}
+
+/* =====================================================================
+   추가 기능 3) 나만의 팔찌·목걸이 만들기
+   ===================================================================== */
+const FREE_MAX = 40;
+const FREE_DEF = { type: 'bracelet', method: 'one', one: [], two: [], color: 'pink', line: 'O', str: 'gold', bg: 'night', title: '' };
+function loadFree() {
+  try {
+    const v = JSON.parse(localStorage.getItem('bead-free') || 'null');
+    if (v && typeof v === 'object') {
+      const f = Object.assign({}, FREE_DEF, v);
+      const ok = b => b && SHAPES.includes(b.shape) && COLORS[b.color];
+      f.one = Array.isArray(f.one) ? f.one.filter(ok).slice(0, FREE_MAX) : [];
+      f.two = Array.isArray(f.two) ? f.two.filter(b => ok(b) && LINE[b.line]).slice(0, FREE_MAX) : [];
+      if (!BGS[f.bg]) f.bg = 'night';
+      if (!STRS[f.str]) f.str = 'gold';
+      if (!COLORS[f.color]) f.color = 'pink';
+      if (!LINE[f.line]) f.line = 'O';
+      return f;
+    }
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(FREE_DEF));
+}
+const free = loadFree();
+let freePop = -1;
+function saveFree() { try { localStorage.setItem('bead-free', JSON.stringify(free)); } catch (e) {} }
+const freeBeads = () => free[free.method];
+const freeTitle = () => free.title.trim() || (free.type === 'bracelet' ? '나만의 팔찌' : '나만의 목걸이');
+
+const segBtn = (attr, val, on, icon, label) =>
+  `<button ${attr}="${val}" aria-pressed="${on}" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl text-base font-extrabold transition ${on ? 'bg-violet-600 text-white shadow-md' : 'bg-violet-50 text-slate-600 hover:bg-violet-100'}"><i data-lucide="${icon}" class="h-5 w-5"></i>${label}</button>`;
+
+function renderFreeControls() {
+  $('freeType').innerHTML = segBtn('data-ftype', 'bracelet', free.type === 'bracelet', 'circle-dot', '팔찌') + segBtn('data-ftype', 'necklace', free.type === 'necklace', 'gem', '목걸이');
+  $('freeMethod').innerHTML = segBtn('data-fmethod', 'one', free.method === 'one', 'minus', '한 줄 꿰기') + segBtn('data-fmethod', 'two', free.method === 'two', 'infinity', '두 줄 교차');
+  $('freeLineBox').classList.toggle('hidden', free.method !== 'two');
+  $('freeLines').innerHTML = lineButtons(free.line, null, 'data-fline');
+  $('freeColors').innerHTML = COLOR_KEYS.map(c => `
+    <button data-fcolor="${c}" aria-pressed="${free.color === c}" aria-label="${COLORS[c].adj}색" title="${COLORS[c].adj}색"
+      class="aspect-square rounded-full p-0.5 transition hover:scale-110 ${free.color === c ? 'ring-4 ring-violet-400 ring-offset-2' : ''}">
+      ${beadSVG('circle', c, 'class="h-full w-full"')}
+    </button>`).join('');
+  $('freeShapes').innerHTML = SHAPES.map(sh => `
+    <button data-fshape="${sh}" class="bead-btn aspect-square rounded-2xl border-2 border-violet-100 bg-white p-2 shadow-sm transition hover:scale-110 hover:border-violet-300 active:scale-95"
+      aria-label="${beadName(B(sh, free.color))} 꿰기" title="${beadName(B(sh, free.color))}">
+      ${beadSVG(sh, free.color, 'class="h-full w-full"')}
+    </button>`).join('');
+  $('freeStr').innerHTML = Object.keys(STRS).map(k => `
+    <button data-fstr="${k}" aria-pressed="${free.str === k}" class="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 text-sm font-bold transition ${free.str === k ? 'border-violet-500 bg-violet-50 text-violet-800' : 'border-slate-200 bg-white text-slate-600 hover:border-violet-300'}">
+      <span class="h-2.5 w-8 rounded-full ring-1 ring-black/10" style="background:linear-gradient(90deg,${STRS[k].c[0]} 50%,${STRS[k].c[1]} 50%)"></span>${STRS[k].label}
+    </button>`).join('');
+  $('freeBg').innerHTML = Object.keys(BGS).map(k => `
+    <button data-fbg="${k}" aria-pressed="${free.bg === k}" class="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 text-sm font-bold transition ${free.bg === k ? 'border-violet-500 bg-violet-50 text-violet-800' : 'border-slate-200 bg-white text-slate-600 hover:border-violet-300'}">
+      <span class="h-6 w-6 rounded-lg ring-1 ring-black/10" style="background:${BGS[k].sw}"></span>${BGS[k].label}
+    </button>`).join('');
+  const t = $('freeTitle');
+  if (document.activeElement !== t) t.value = free.title;
+  t.placeholder = free.type === 'bracelet' ? '나만의 팔찌' : '나만의 목걸이';
+  $('freeCount').textContent = `꿴 구슬 ${freeBeads().length}개 (최대 ${FREE_MAX}개)`;
+}
+
+function renderFreeStage() {
+  const beads = freeBeads(), two = free.method === 'two', bg = BGS[free.bg], cols = STRS[free.str].c;
+  const lay = two ? layoutTwo(beads.map(b => ({ line: b.line, b })), free.type, false) : layoutOne(beads, free.type);
+  const title = freeTitle();
+  let s = `<svg id="freeSvg" viewBox="0 0 800 480" class="block h-auto w-full" role="img" aria-label="${esc(title)}">` + bgLayer(free.bg);
+  s += stringsSVG(lay.strings, cols);
+  if (lay.clasp) s += claspSVG(cols[0]);
+  beads.forEach((b, i) => { s += beadG(lay.pos[i], b, '', i === freePop ? 'bead-pop' : ''); });
+  const cy = free.type === 'bracelet' ? 238 : 190, fs = title.length <= 5 ? 32 : title.length <= 8 ? 25 : 20;
+  s += `<text x="400" y="${cy}" text-anchor="middle" fill="${bg.ink}" font-size="${fs}" font-weight="800">${esc(title)}</text>`;
+  s += `<text x="400" y="${cy + 28}" text-anchor="middle" fill="${bg.sub}" font-size="17" font-weight="600">${beads.length ? `구슬 ${beads.length}개` : '구슬을 골라 꿰어 보세요'}</text></svg>`;
+  $('freeStage').innerHTML = s;
+  freePop = -1;
+}
+function renderFree() { renderFreeControls(); renderFreeStage(); icons(); }
+
+function freeAdd(shape) {
+  const arr = freeBeads();
+  if (arr.length >= FREE_MAX) { sndWrong(); toast('구슬을 더 꿸 자리가 없어요!', 'bad'); return; }
+  const b = { shape, color: free.color };
+  if (free.method === 'two') b.line = free.line;
+  arr.push(b); freePop = arr.length - 1;
+  sndCorrect(arr.length - 1);
+  saveFree(); renderFreeStage(); $('freeCount').textContent = `꿴 구슬 ${arr.length}개 (최대 ${FREE_MAX}개)`;
+}
+function freeAct(act) {
+  const arr = freeBeads();
+  if (act === 'undo') { if (!arr.length) return; arr.pop(); sndPop(); }
+  else if (act === 'repeat') {
+    if (!arr.length) { toast('먼저 구슬을 꿰어 보세요!', 'bad'); return; }
+    if (arr.length * 2 > FREE_MAX) { sndWrong(); toast('반복하기엔 자리가 모자라요!', 'bad'); return; }
+    arr.push(...arr.map(b => Object.assign({}, b))); sndRepeat(); toast('지금까지 꿴 구슬을 한 번 더 반복했어요', 'good');
+  }
+  else if (act === 'clear') { if (!arr.length || !confirm('꿴 구슬을 모두 지울까요?')) return; arr.length = 0; }
+  else if (act === 'save') { savePNG($('freeSvg'), freeTitle()); return; }
+  saveFree(); renderFree();
+}
+
+/* ============ 추가 기능 이벤트 ============ */
+function renderModeBar() {
+  $('modeBar').innerHTML = Object.keys(MODES).map(m => {
+    const on = MODE === m;
+    return `<button data-mode="${m}" aria-pressed="${on}" class="flex flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-2 py-2.5 transition sm:flex-row sm:gap-2 ${on ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md' : 'text-slate-600 hover:bg-violet-50'}">
+      <i data-lucide="${MODES[m].icon}" class="h-6 w-6"></i>
+      <span class="flex flex-col items-center leading-tight sm:items-start"><span class="text-base font-extrabold sm:text-lg">${MODES[m].label}</span><span class="text-xs font-semibold ${on ? 'text-white/80' : 'text-slate-400'} sm:text-sm">${MODES[m].sub}</span></span>
+    </button>`;
+  }).join('');
+}
+function setMode(m) {
+  closeModal();
+  MODE = m;
+  $('viewBasic').classList.toggle('hidden', m !== 'basic');
+  $('viewAdv').classList.toggle('hidden', m !== 'adv');
+  $('viewFree').classList.toggle('hidden', m !== 'free');
+  $('btnGuide').classList.toggle('hidden', m === 'free');
+  $('subTitle').textContent = MODES[m].title;
+  renderModeBar();
+  if (m === 'adv' && !adv.lay) { renderAdvHow(); selectAdv('necklace', 0); }
+  if (m === 'free') renderFree();
+  icons();
+}
+
+$('modeBar').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b && b.dataset.mode !== MODE) setMode(b.dataset.mode); });
+$('advTabs').addEventListener('click', e => { const b = e.target.closest('[data-atab]'); if (b) selectAdv(b.dataset.atab, 0); });
+$('advChips').addEventListener('click', e => { const b = e.target.closest('[data-aidx]'); if (b) selectAdv(adv.tab, +b.dataset.aidx); });
+$('advLines').addEventListener('click', e => {
+  const b = e.target.closest('[data-line]');
+  if (!b) return;
+  audio(); adv.line = b.dataset.line; tone({ f: 700, d: 0.12, g: 0.12, type: 'triangle' });
+  renderAdvLines();
+});
+$('advTray').addEventListener('click', e => { const b = e.target.closest('.bead-btn'); if (b) { audio(); pickAdv(b); } });
+$('advHint').addEventListener('click', () => { audio(); hintAdv(); });
+$('btnReset').addEventListener('click', () => {
+  if (MODE === 'adv') selectAdv(adv.tab, adv.idx);
+  else if (MODE === 'free') freeAct('clear');
+});
+$('btnGuide').addEventListener('click', () => { if (adv.lay) { renderAdvRule(); renderAdvStage(); renderAdvLines(); icons(); } });
+$('modalRoot').addEventListener('click', e => {
+  const b = e.target.closest('[data-aact]');
+  if (!b) return;
+  if (b.dataset.aact === 'save') savePNG($('advStageSvg'), advCur().name);
+  else if (b.dataset.aact === 'again') selectAdv(adv.tab, adv.idx);
+  else { const nx = nextAdv(); selectAdv(nx.tab, nx.idx); }
+});
+$('viewFree').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  audio();
+  const d = b.dataset;
+  if (d.fshape) return freeAdd(d.fshape);
+  if (d.fact) return freeAct(d.fact);
+  if (d.ftype) free.type = d.ftype;
+  else if (d.fmethod) free.method = d.fmethod;
+  else if (d.fline) { free.line = d.fline; tone({ f: 700, d: 0.12, g: 0.12, type: 'triangle' }); }
+  else if (d.fcolor) free.color = d.fcolor;
+  else if (d.fstr) free.str = d.fstr;
+  else if (d.fbg) free.bg = d.fbg;
+  else return;
+  saveFree(); renderFree();
+});
+$('freeTitle').addEventListener('input', e => { free.title = e.target.value; saveFree(); renderFreeStage(); });
+
+/* ============ 시작 ============ */
+buildDefs();
+addDefs();
+renderModeBar();
+selectWork('necklace', 0);
+</script>
+</body>
+</html>
